@@ -1,0 +1,37 @@
+import { myQDevice, myQHwInfo } from "./myq-types.js";
+import { myQLogging } from "./myq-logging.js";
+export declare class myQApi {
+    devices: myQDevice[];
+    private accessToken;
+    private refreshTimer;
+    private refreshToken;
+    private tokenScope;
+    private apiReturnStatus;
+    private email;
+    private password;
+    private accounts;
+    private headers;
+    private log;
+    private myqRetrieve;
+    private region;
+    constructor(log?: myQLogging);
+    login(refreshToken: string): Promise<boolean>;
+    private generateLoginHeaders;
+    private generateApiHeaders;
+    private oauthGetAuthPage;
+    private oauthLogin;
+    private oauthRedirect;
+    private getOAuthToken;
+    private setTokenRefreshTimer;
+    private refreshOAuthToken;
+    private acquireAccessToken;
+    private refreshAccessToken;
+    refreshDevices(): Promise<boolean>;
+    execute(device: myQDevice, command: string): Promise<boolean>;
+    private getAccounts;
+    getDevice(serial: string): myQDevice | null;
+    getDeviceName(device: myQDevice): string;
+    getHwInfo(serial: string): myQHwInfo | null;
+    private generateLoginCookies;
+    private retrieve;
+}
