@@ -111,11 +111,15 @@ export class myQApi {
     this.myqRetrieve = fetch;
   }
 
-  // Initialize this instance with our login information.
-  public async login(email: string, password: string): Promise<boolean> {
+  // Initialize this instance with the user's refresh token (obtained from the official myQ app).
+  //
+  // The myQ API gates the authorization_code grant (initial password login) behind Firebase
+  // App Check, which requires a real attested device. The refresh-token grant remains open
+  // for any client. Users do a one-time extraction of their refresh_token from the official
+  // myQ app on their phone and paste it here. The plugin then refreshes indefinitely.
+  public async login(refreshToken: string): Promise<boolean> {
 
-    this.email = email;
-    this.password = password;
+    this.refreshToken = refreshToken;
     this.accessToken = null;
 
     return this.refreshDevices();
@@ -303,49 +307,17 @@ export class myQApi {
       this.refreshTimer = null;
     }
 
-    // Generate the OAuth PKCE challenge required for the myQ API.
-    const pkce = await pkceChallenge();
-
-    // Call the myQ authorization endpoint using our PKCE challenge to get the web login page.
-    let response = await this.oauthGetAuthPage(pkce.code_challenge);
-
-    if(!response) {
-
-      return null;
-    }
-
-    // Attempt to login.
-    response = await this.oauthLogin(response);
-
-    if(!response) {
-
-      return null;
-    }
-
-    // Intercept the redirect back to the myQ iOS app.
-    response = await this.oauthRedirect(response);
-
-    if(!response) {
-
-      return null;
-    }
-
-    // Parse the redirect URL to extract the PKCE verification code and scope.
-    const redirectUrl = new URL(response.headers.get("location") ?? "");
-
-    // Create the request to get our access and refresh tokens.
+    // Refresh-token-only auth: skip the PKCE/login dance entirely. Use the refresh token
+    // supplied by the user (extracted one-time from the official myQ app) to mint a fresh
+    // access token. The refresh-token grant does not require Firebase App Check.
     const requestBody = new URLSearchParams({
 
       "client_id": MYQ_API_CLIENT_ID,
-      "code": redirectUrl.searchParams.get("code") as string,
-      "code_verifier": pkce.code_verifier,
-      "grant_type": "authorization_code",
-      "redirect_uri": MYQ_API_REDIRECT_URI,
-      "scope": MYQ_API_SCOPE
+      "grant_type": "refresh_token",
+      "refresh_token": this.refreshToken
     });
 
-    // Now we execute the final login redirect that will validate the PKCE challenge and return our access and refresh tokens.
-    response = await this.retrieve("https://partner-identity.myq-cloud.com/connect/token", {
+    const response = await this.retrieve("https://partner-identity.myq-cloud.com/connect/token", {
 
       body: requestBody.toString(),
       headers: this.generateApiHeaders({ "Content-Type": "application/x-www-form-urlencoded" }),
@@ -357,10 +329,11 @@ export class myQApi {
       return null;
     }
 
-    // Grab the token JSON.
+    // Grab the token JSON. The server rotates the refresh token on every refresh; persist
+    // the new one (the caller may want to write it back to the config).
     const token = await response.json() as myQToken;
     this.refreshToken = token.refresh_token;
-    this.tokenScope = redirectUrl.searchParams.get("scope") ?? "" ;
+    this.tokenScope = token.scope ?? this.tokenScope;
 
     this.setTokenRefreshTimer(token.expires_in);
 

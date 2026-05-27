@@ -3,19 +3,19 @@
   "type": "module",
   "version": "7.6.0",
   "displayName": "myQ API",
-  "description": "A nearly complete and modern implementation of the Liftmaster / Chamberlain myQ API.",
+  "description": "Fork of @hjdhjd/myq using refresh-token-only auth (iOS client_id IOS_CGI_MYQ). Bootstrap requires one-time refresh_token extraction from the official myQ app; refresh works indefinitely thereafter without Firebase App Check.",
   "author": {
     "name": "HJD",
     "url": "https://github.com/hjdhjd"
   },
-  "homepage": "https://github.com/hjdhjd/myq#readme",
+  "homepage": "https://github.com/rfiorentino1/myq#readme",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git://github.com/hjdhjd/myq.git"
+    "url": "git://github.com/rfiorentino1/myq.git"
   },
   "bugs": {
-    "url": "https://github.com/hjdhjd/myq/issues"
+    "url": "https://github.com/rfiorentino1/myq/issues"
   },
   "keywords": [
     "chamberlain",
