@@ -1,101 +1,53 @@
-<SPAN ALIGN="CENTER" STYLE="text-align:center">
-<DIV ALIGN="CENTER" STYLE="text-align:center">
+# @hjdhjd/myq — refresh-token-only fork
 
-[![myQ: A modern implementation of the myQ API for Liftmaster and Chamberlain devices](https://raw.githubusercontent.com/hjdhjd/myq/main/myQ.svg)](https://github.com/hjdhjd/myq)
+Fork of [hjdhjd/myq](https://github.com/hjdhjd/myq) (a modern myQ v6 API library for Liftmaster / Chamberlain devices) adapted for the **post-AppCheck era**.
 
-# myQ
+## Why this fork exists
 
-[![Downloads](https://img.shields.io/npm/dt/@hjdhjd/myq?color=%235EB5E5&logo=icloud&logoColor=%23FFFFFF&style=for-the-badge)](https://www.npmjs.com/package/@hjdhjd/myq)
-[![Version](https://img.shields.io/npm/v/@hjdhjd/myq?color=%235EB5E5&label=myQ&logoColor=%23FFFFFF&style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBzdHlsZT0iZmlsbDojRkZGRkZGIiBkPSJNMjMuOTkzIDkuODE2TDEyIDIuNDczbC00LjEyIDIuNTI0VjIuNDczSDQuMTI0djQuODE5TC4wMDQgOS44MTZsMS45NjEgMy4yMDIgMi4xNi0xLjMxNXY5LjgyNmgxNS43NDl2LTkuODI2bDIuMTU5IDEuMzE1IDEuOTYtMy4yMDIiLz48L3N2Zz4K)](https://www.npmjs.com/package/@hjdhjd/myq)
+In late 2023 Chamberlain wrapped the `authorization_code` grant on `partner-identity.myq-cloud.com` behind **Firebase App Check** (Play Integrity on Android, App Attest on iOS). The original email-and-password login flow used by hjdhjd's library — and by every other community library — broke at that point. The library's author retired the project shortly after.
 
-## myQ: A modern implementation of the myQ API for Liftmaster and Chamberlain devices.
-</DIV>
-</SPAN>
+The `refresh_token` grant on the same endpoint remained open. This fork:
 
-`myq` is a library that enables you to connect to and communicate with [myQ-enabled devices](https://myq.com). myQ-enabled devices include many garage door openers made primarily by Liftmaster, Chamberlain, and Craftsman, but includes other brands as well. You can determine if your garage door or other device is myQ-enabled by checking the [myQ compatibility check tool](https://www.myq.com/myq-compatibility) on the [myQ](https://www.myq.com) website.
+- Switches the OAuth client identity to **`IOS_CGI_MYQ`** (Chamberlain's iOS app's confidential client).
+- Replaces `login(email, password)` with `login(refreshToken)`.
+- Skips the PKCE / browser-form / authorization_code dance entirely. Every call to `/connect/token` is a refresh-grant request, which Chamberlain does **not** AppCheck-gate.
 
-## Why use this library for myQ support?
-In short - because I use it every day to support a very popular [Homebridge](https://homebridge.io) plugin named [homebridge-myq](https://www.npmjs.com/package/homebridge-myq) that I maintain. I have been occasionally asked if I would consider packaging the core API library separately from the plugin so that other open source projects can take advantage of the work that's been done here to understand and decode the myQ API.
+The result: once a user has a valid refresh_token from a real attested device (their phone), this library can refresh it indefinitely from any server. Tokens are rotated by the server on every refresh; the library persists the new one for the caller.
 
-In addition, this implementation is unique: it's the first complete open source implementation of the latest myQ API, v6. The v6 API is quite different in significant ways, including a shift to OAuth-based authentication that's clearly the path the myQ API is moving toward in the future. Additionally, v6 brings other advantages besides leveraging modern OAuth semantics, such as making devices shared across accounts available, which has previously been unavailable in prior myQ API versions.
+## What still needs to come from a real device
 
-Finally - the most significant reason that you should use this library: it's very well-tested, it is modern, and most importantly, *it just works*. It's quite easy to add support for myQ in your project using this library, and you can rely on the fact that the code is used by a significant population of users out there who ensure its continued robustness.
+**One time, per residential myQ account.** The first refresh_token has to be minted by the official myQ app on real Apple- or Google-attested hardware. After that, this library does not need a phone ever again.
 
-### <A NAME="myq-contribute"></A>How you can contribute and make this library even better
-This implementation is largely feature complete. It doesn't support myQ locks or cameras, but may do so in time, though contributions are always welcome.
+How to extract a refresh_token from your own myQ account is out of scope for this README. See [`homebridge-myq`](https://github.com/rfiorentino1/homebridge-myq) for the consumer-facing plugin; future versions of the plugin will embed the capture flow directly so users don't have to do it manually.
 
-The myQ API is undocumented and implementing a library like this one is the result of many hours of trial and error as well as community support. This work stands on the shoulders of other myQ API projects out there and this project attempts to contribute back to that community base of knowledge to further improve myQ support for everyone in the ecosystem.
+## API
 
-### Features
-- Full access to the myQ devices JSON.
-- The ability to retrieve the status of any supported myQ device.
-- The ability to open or close a supported garage door.
-- The ability to turn on or off a supported lamp.
+```ts
+import { myQApi } from "@hjdhjd/myq";
 
-## Changelog
-* [Changelog](https://github.com/hjdhjd/myq/blob/main/docs/Changelog.md): changes and release history of this library.
+const api = new myQApi(/* optional logger */);
+await api.login("YOUR_REFRESH_TOKEN_HEX");
+await api.refreshDevices();
+console.log(api.devices);
 
-## Installation
-To use this library in Node, install it from the command line:
-
-```sh
-npm install @hjdhjd/myq
+// Open the first garage door
+await api.execute(api.devices[0], "open");
 ```
 
-## Documentation
+Same public surface as the upstream library, minus the no-longer-functional email/password fields. See [upstream docs](https://github.com/hjdhjd/myq) for `getDevice`, `getDeviceName`, `getHwInfo`, `execute`, etc. — those are unchanged.
 
-If you'd like to see all this in action in a well-documented, real-world example, please take a good look at my [homebridge-myq](https://github.com/hjdhjd/homebridge-myq) project. It relies heavily on this library for the core functionality it provides.
+## Install
 
-### myQApi(log: myQLogging)
-Initialize the myQ API. `log` is an optional parameter that enables you to customize the type of logging that can be generated, including debug logging. If `log` isn't specified, the myQ API will default to logging to the console.
+```bash
+npm install github:rfiorentino1/myq
+```
 
-### login(email: string, password: string)
-Login to the myQ API using the myQ account information contained in `email` and `password` and call `refreshDevices()` to initialize the API and populate the list of myQ devices associated with a given account.
+Pre-built `dist/` is committed to the repo so installs do not require TypeScript compilation on the target machine.
 
-**Note: `login()` must be called before any other API function can be used.**
+## Credit
 
-Returns: `true` if successful, `false` otherwise.
+All of the v6 API decoding, device-type fingerprinting, MQTT support, and overall architecture is hjdhjd's work — see the original [hjdhjd/myq](https://github.com/hjdhjd/myq) repository. This fork is a minimal surgical patch on top, made necessary by Chamberlain's post-2023 hostility to third-party clients.
 
-### refreshDevices()
-This is where the magic happens. This function:
+## License
 
-* If we do have an access token and it's nearly time to refresh it, it will do so.
-* It then requests a refresh of the myQ state and device information for all the myQ devices associated with the currently logged in account. There are failsafes in place to ensure it can't be called more than once every two seconds in order to prevent overtaxing the myQ API and potentially lockout an account.
-
-Returns: `true` if successful, `false` otherwise.
-
-### myQApi.devices[]
-The devices property maintains the list of all known myQ devices. It is an array of `myQDevice` objects, and you can look through [myq-types.ts](https://github.com/hjdhjd/myq/blob/main/src/myq-types.ts) for a sense of what's contained in a `myQDevice` object.
-
-This property is refreshed each time `refreshDevices()` is called.
-
-### execute(device: myQDevice, command: string)
-Execute a command on a given myQ device. Valid values for `command`:
-
-  * Garage doors: `open` and `close`
-  * Lamps: `on` and `off`
-
-Returns: `true` if successful, `false` otherwise.
-
-### getDevice(serial: string)
-Get the details of a specific device identified by the serial number `serial` in the myQ device list. In practice, I rarely use this, and I suspect most people won't either, in favor of walking the entire myQ device list which is what most people want to do most of the time.
-
-Returns: `myQDevice` if found, or `null`.
-
-### getDeviceName(device: myQDevice)
-Given `device`, returns a nicely formatted device string suitable for logging information or end users.
-
-Returns: a string representing the device name, model, and serial number, if available.
-
-### getHwInfo(serial: string)
-Get the model information of a device identified by the serial number `serial`. myQ devices have a specific serial number pattern, and you can use it to deduce the model information of a particular device.
-
-Returns: `myQHwInfo` if found, or `null` if we can't deduce what the hardware and model information is.
-
-## Library Development Dashboard
-This is mostly of interest to the true developer nerds amongst us.
-
-[![License](https://img.shields.io/npm/l/@hjdhjd/myq?color=%230559C9&logo=open%20source%20initiative&logoColor=%23FFFFFF&style=for-the-badge)](https://github.com/hjdhjd/myq/blob/main/LICENSE.md)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/hjdhjd/myq/ci.yml?branch=main&color=%230559C9&logo=github-actions&logoColor=%23FFFFFF&style=for-the-badge)](https://github.com/hjdhjd/myq/actions?query=workflow%3A%22Continuous+Integration%22)
-[![Dependencies](https://img.shields.io/librariesio/release/npm/@hjdhjd/myq?color=%230559C9&logo=dependabot&style=for-the-badge)](https://libraries.io/npm/@hjdhjd/myq)
-[![GitHub commits since latest release (by SemVer)](https://img.shields.io/github/commits-since/hjdhjd/myq/latest?color=%230559C9&logo=github&sort=semver&style=for-the-badge)](https://github.com/hjdhjd/myq/commits/main)
+ISC, per upstream.
