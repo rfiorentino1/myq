@@ -479,7 +479,7 @@ export class myQApi {
   public async refreshDevices(): Promise<boolean> {
 
     // Sanity check.
-    if(!this.login || !this.password) {
+    if(!this.refreshToken) {
 
       this.log.error("You must login to the myQ API prior to calling this function.");
       return false;
@@ -570,7 +570,7 @@ export class myQApi {
   public async execute(device: myQDevice, command: string): Promise<boolean> {
 
     // Sanity check.
-    if(!this.login || !this.password) {
+    if(!this.refreshToken) {
 
       this.log.error("You must login to the myQ API prior to calling this function.");
       return false;
@@ -650,7 +650,7 @@ export class myQApi {
   public getDevice(serial: string): myQDevice | null {
 
     // Login sanity check.
-    if(!this.login || !this.password) {
+    if(!this.refreshToken) {
 
       this.log.error("You must login to the myQ API prior to calling this function.");
       return null;
