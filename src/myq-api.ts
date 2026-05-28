@@ -157,6 +157,34 @@ export class myQApi {
     return this.refreshToken || null;
   }
 
+  // Notified every time the lib rotates its refresh_token; the plugin uses this to persist
+  // the new value to disk so restarts don't fall back to a stale token from the homebridge
+  // config.json (which is the most common cause of "lockouts" after a Homebridge restart).
+  private tokenPersistCallback?: (newRefreshToken: string) => void | Promise<void>;
+
+  public setTokenPersistCallback(cb: (newRefreshToken: string) => void | Promise<void>): void {
+
+    this.tokenPersistCallback = cb;
+  }
+
+  // Internal: fire the persistence callback (if any). Swallows callback errors so a
+  // misbehaving plugin can't break the lib's auth loop.
+  private async firePersistCallback(): Promise<void> {
+
+    if(!this.tokenPersistCallback || !this.refreshToken) {
+
+      return;
+    }
+
+    try {
+
+      await this.tokenPersistCallback(this.refreshToken);
+    } catch(e) {
+
+      this.log.debug("Refresh-token persist callback threw: %s", String(e));
+    }
+  }
+
   // Utility to emulate the native myQ app behavior during the login process.
   private generateLoginHeaders(headers?: Record<string, string>): Record<string, string> {
 
@@ -368,6 +396,7 @@ export class myQApi {
     this.tokenScope = token.scope ?? this.tokenScope;
 
     this.setTokenRefreshTimer(token.expires_in);
+    await this.firePersistCallback();
 
     // Return the access token in cookie-ready form: "Bearer ...".
     return token.token_type + " " + token.access_token;
@@ -428,6 +457,7 @@ export class myQApi {
     this.tokenScope = token.scope ?? this.tokenScope;
 
     this.setTokenRefreshTimer(token.expires_in);
+    await this.firePersistCallback();
 
     this.log.debug("Successfully refreshed the myQ API access token.");
 

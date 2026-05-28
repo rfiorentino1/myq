@@ -31,6 +31,9 @@ export declare class myQApi {
      * from here, not the (rotated-away, now-invalid) one in the homebridge config.
      */
     getCurrentRefreshToken(): string | null;
+    private tokenPersistCallback?;
+    setTokenPersistCallback(cb: (newRefreshToken: string) => void | Promise<void>): void;
+    private firePersistCallback;
     private generateLoginHeaders;
     private generateApiHeaders;
     private oauthGetAuthPage;
