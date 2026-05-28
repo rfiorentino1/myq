@@ -25,6 +25,12 @@ export declare class myQApi {
     getRawAccessToken(): string | null;
     /** Account id list (UUIDs). Cameras are scoped per account; callers may need this for Tend. */
     get accountIds(): readonly string[];
+    /**
+     * The lib rotates refresh_token on every refresh. Callers that need to run their own
+     * IDS refresh-token grants (e.g. for Tend platform access) should read the LATEST one
+     * from here, not the (rotated-away, now-invalid) one in the homebridge config.
+     */
+    getCurrentRefreshToken(): string | null;
     private generateLoginHeaders;
     private generateApiHeaders;
     private oauthGetAuthPage;

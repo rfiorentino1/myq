@@ -147,6 +147,16 @@ export class myQApi {
     return this.accounts;
   }
 
+  /**
+   * The lib rotates refresh_token on every refresh. Callers that need to run their own
+   * IDS refresh-token grants (e.g. for Tend platform access) should read the LATEST one
+   * from here, not the (rotated-away, now-invalid) one in the homebridge config.
+   */
+  public getCurrentRefreshToken(): string | null {
+
+    return this.refreshToken || null;
+  }
+
   // Utility to emulate the native myQ app behavior during the login process.
   private generateLoginHeaders(headers?: Record<string, string>): Record<string, string> {
 
