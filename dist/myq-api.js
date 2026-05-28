@@ -106,6 +106,22 @@ export class myQApi {
         this.accessToken = null;
         return this.refreshDevices();
     }
+    /**
+     * Public accessor for the raw Bearer JWT — needed by callers that talk to the Tend platform
+     * directly (e.g., camera streaming/snapshots), which uses the same access token but a
+     * different host than the legacy myQ REST endpoints.
+     * Returns the JWT without the "Bearer " prefix, or null if not signed in.
+     */
+    getRawAccessToken() {
+        if (!this.accessToken) {
+            return null;
+        }
+        return this.accessToken.replace(/^Bearer\s+/i, "");
+    }
+    /** Account id list (UUIDs). Cameras are scoped per account; callers may need this for Tend. */
+    get accountIds() {
+        return this.accounts;
+    }
     // Utility to emulate the native myQ app behavior during the login process.
     generateLoginHeaders(headers) {
         return Object.assign({

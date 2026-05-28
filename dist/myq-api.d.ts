@@ -16,6 +16,15 @@ export declare class myQApi {
     private region;
     constructor(log?: myQLogging);
     login(refreshToken: string): Promise<boolean>;
+    /**
+     * Public accessor for the raw Bearer JWT — needed by callers that talk to the Tend platform
+     * directly (e.g., camera streaming/snapshots), which uses the same access token but a
+     * different host than the legacy myQ REST endpoints.
+     * Returns the JWT without the "Bearer " prefix, or null if not signed in.
+     */
+    getRawAccessToken(): string | null;
+    /** Account id list (UUIDs). Cameras are scoped per account; callers may need this for Tend. */
+    get accountIds(): readonly string[];
     private generateLoginHeaders;
     private generateApiHeaders;
     private oauthGetAuthPage;
